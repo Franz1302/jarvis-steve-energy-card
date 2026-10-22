@@ -359,13 +359,23 @@ class JarvisSteveEnergyCard extends HTMLElement {
     const ring=this.shadowRoot.getElementById('autarky-ring');const a=this._number('autonomyDay');if(ring){const n=a===null?0:Math.min(100,Math.max(0,a));ring.setAttribute('stroke-dasharray',(62.83*n/100).toFixed(2)+' 62.83');ring.style.opacity=a===null?'0':'1';}
     this._txt('pv-status',pv===null?'—':pv>th?'Aktiv':'Inaktiv');this.shadowRoot.getElementById('pv-dot').setAttribute('fill',pv===null?'#70808a':pv>th?'#87ff4d':'#536974');
     const gridColor=net===null?'#70808a':net < -th?'#ffb638':'#ff4055';this._txt('grid-status',net===null?'—':net < -th?'Einspeisung':net > th?'Netzbezug':'Neutral');this.shadowRoot.getElementById('grid-status').style.fill=gridColor;this.shadowRoot.getElementById('grid-dot').setAttribute('fill',gridColor);
-    const activePreview=this._preview;this._flow('pv-flow',activePreview||(pv!==null&&pv>th),'#10ddff',false);this._flow('grid-flow',activePreview||(net!==null&&Math.abs(net)>th),'#ff4055',net!==null&&net < -th);
+    const activePreview=this._preview;
     const pvAvailable=pv!==null&&pv>th;
     const gridAvailable=net!==null&&Math.abs(net)>th;
-    const infos={};for(const [key] of JARVIS_STEVE_ROOMS){
-      const info=this._roomInfo(key);infos[key]=info;
+    // A running room consumer must still have a visual route without a grid
+    // power meter. In that case red only means an ASSUMED grid supply:
+    // PV > threshold takes priority, and no unmeasured watt value is invented.
+    const infos={};for(const [key] of JARVIS_STEVE_ROOMS)infos[key]=this._roomInfo(key);
+    const anyActive=Object.values(infos).some(info=>info.active);
+    const assumedGrid=net===null&&!pvAvailable&&anyActive;
+    this._flow('pv-flow',activePreview||pvAvailable,'#10ddff',false);
+    this._flow('grid-flow',activePreview||gridAvailable||assumedGrid,'#ff4055',net!==null&&net < -th);
+    const gridSource=this.shadowRoot.getElementById('grid-flow');
+    if(gridSource)gridSource.setAttribute('aria-label',assumedGrid?'Netzversorgung nur angenommen – kein Netzleistungswert':'Netzenergie');
+    for(const [key] of JARVIS_STEVE_ROOMS){
+      const info=infos[key];
       this._flow(key+'-flow',activePreview||(pvAvailable&&info.active),'#10ddff',false);
-      this._flow(key+'-grid-flow',activePreview||(gridAvailable&&info.active),'#ff4055',net!==null&&net< -th);
+      this._flow(key+'-grid-flow',activePreview||((gridAvailable||assumedGrid)&&info.active),'#ff4055',net!==null&&net< -th);
     }
     const durations=[['pv-flow',pv],['grid-flow',net===null?null:Math.abs(net)]];
     for(const [key] of JARVIS_STEVE_ROOMS){durations.push([key+'-flow',infos[key].watts],[key+'-grid-flow',infos[key].watts]);}for(const [id,watts] of durations){let el=this.shadowRoot.getElementById(id);if(el){const secs=watts===null?1.6:Math.max(.55,2.1-Math.log10(1+Math.max(0,watts)/100)*.85);el.style.setProperty('--duration',secs.toFixed(2)+'s');}}
