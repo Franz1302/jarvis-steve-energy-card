@@ -176,10 +176,11 @@ class JarvisSteveEnergyCard extends HTMLElement {
           const prev=byDevice.get(d);if(!prev||score>prev.score)byDevice.set(d,{id,score});
         }
       }
-      const metered=new Set([...byDevice.keys(),...explicitDevices]);
       if(c.auto_switch_activity){
         for(const [id,e] of Object.entries(h.entities)){
-          if(skip.has(id)||e.disabled_by||e.hidden_by||areaFor(e)!==area||metered.has(e.device_id||id))continue;
+          // Power is counted once per device; its on/off status is separate and
+          // may activate the visual route even when wattage is below threshold.
+          if(skip.has(id)||e.disabled_by||e.hidden_by||areaFor(e)!==area)continue;
           if(id.startsWith('light.')||id.startsWith('switch.'))activity.push({entity:id,active:['on']});
         }
       }
