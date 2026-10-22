@@ -1,0 +1,31 @@
+# JARVIS Steve Energy Card – Dashboard-Kartenkonfiguration
+type: custom:jarvis-steve-energy-card
+background_image: /hacsfiles/jarvis-steve-energy-card/Steve_Energie_Background.png
+flow_threshold_w: 10
+animations: true
+auto_discover_rooms: true
+auto_switch_activity: true
+exclude_entities: []
+tariff_helpers:
+  import: input_number.steve_bezugstarif_ct
+  export: input_number.steve_einspeisetarif_ct
+grid_sign_verified: false
+entities:
+  pv: sensor.solis_inverter_ac_power
+  house: sensor.solis_home_load_power
+  imp:
+  exp:
+  meter:
+  pvDay: sensor.solis_inverter_generation_today
+  gridImportDay: sensor.solis_grid_import_today
+  exportDay: sensor.solis_grid_export_today
+  houseDay: sensor.solis_home_load_today
+  monthImport: sensor.solis_grid_import_this_month
+  monthExport: sensor.solis_grid_export_this_month
+  pvMonth: sensor.solis_inverter_generation_this_month
+  cost:
+  cash:
+  revenue:
+  autonomyDay:
+  selfMonth:
+  rate:
