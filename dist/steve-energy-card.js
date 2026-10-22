@@ -118,7 +118,8 @@ class JarvisSteveEnergyCard extends HTMLElement {
     const e=config.entities||{};
     this._config={...config,entities:Object.fromEntries(JARVIS_STEVE_FIELDS.map(k=>[k,typeof e[k]==='string'&&e[k]?e[k]:null])),rooms:config.rooms||{},flow_threshold_w:Number(config.flow_threshold_w ?? 10),animations:config.animations!==false,grid_sign_verified:config.grid_sign_verified===true,auto_discover_rooms:config.auto_discover_rooms!==false,auto_switch_activity:config.auto_switch_activity!==false,area_map:config.area_map||{},exclude_entities:config.exclude_entities||[],tariff_helpers:{import:config.tariff_helpers?.import||'input_number.steve_bezugstarif_ct',export:config.tariff_helpers?.export||'input_number.steve_einspeisetarif_ct'}};
     if(!Number.isFinite(this._config.flow_threshold_w)||this._config.flow_threshold_w<0)throw new Error('flow_threshold_w muss >= 0 sein');
-    this.style.backgroundImage=config.background_image===false?'':`url("${String(config.background_image||'/hacsfiles/jarvis-steve-energy-card/Steve_Energie_Background.png').replace(/["\\]/g,'')}")`;this.style.backgroundSize='100% 100%';this.style.backgroundPosition='center';this._render();this._registryIdentity=null;this._syncDiscovery();if(this._hass)this._update();
+    // The image is rendered in the SVG coordinate system, not stretched independently on the host.
+    this.style.backgroundImage='none';this._render();this._registryIdentity=null;this._syncDiscovery();if(this._hass)this._update();
   }
   set hass(hass){this._hass=hass;this._syncDiscovery();this._update();} get hass(){return this._hass;} getCardSize(){return 1;}
   connectedCallback(){this._clock();this._clockTimer=setInterval(()=>this._clock(),15000);this._visibility=()=>this._pause();document.addEventListener('visibilitychange',this._visibility);this._pause();}
@@ -253,9 +254,11 @@ class JarvisSteveEnergyCard extends HTMLElement {
       flows+=this._flowMarkup(key+'-grid-flow',route.grid,'room grid',i+11);
     });
     const hotspots=R.map(([key,name,x,y])=>`<g class="room-hit" data-room="${key}" role="button" tabindex="0" aria-label="${name}: Energiedetails"><circle cx="${x}" cy="${y}" r="21" fill="transparent"/><circle cx="${x}" cy="${y}" r="4" class="room-dot"/></g>`).join('');
+    const bgUrl=this._config.background_image===false?'':String(this._config.background_image||'/hacsfiles/jarvis-steve-energy-card/Steve_Energie_Background.png').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     let svg=`<svg viewBox="0 0 1672 941" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="JARVIS Energieübersicht Steve"><defs>
     <linearGradient id="glass" x1="0" y1="0" x2=".4" y2="1"><stop stop-color="#031c2c" stop-opacity=".94"/><stop offset="1" stop-color="#00101e" stop-opacity=".89"/></linearGradient>
     </defs>
+    ${bgUrl?`<image class="house-bg" x="0" y="0" width="1672" height="941" preserveAspectRatio="none" href="${bgUrl}"/>`:''}
     <g class="routes">${flows}</g><g class="room-hotspots">${hotspots}</g>
     <!-- Originale JARVIS-Marke bleibt als Vektor erhalten, am freien oberen Rand. -->
     <g transform="translate(674 -4) scale(.70)"><g class="logo" stroke="#09d7ff" fill="none" stroke-width="3"><path d="M38 54H59Q65 54 65 47V29M83 54L102 30L122 54M142 30H172Q181 30 178 38Q177 42 169 42H143V54M167 42L180 54M199 30L219 54L239 30M260 29V55M319 30H289Q280 30 280 36Q280 42 289 42H310Q318 42 318 48Q318 54 309 54H280"/></g></g>
@@ -306,7 +309,7 @@ class JarvisSteveEnergyCard extends HTMLElement {
     </svg>`;
     this.shadowRoot.innerHTML=`<style>
 :host{display:block;position:relative;width:100%;height:100%;aspect-ratio:1672/941;background-repeat:no-repeat;color:#63e4ff;font-family:'Arial Narrow','Roboto Condensed',Arial,sans-serif;--cyan:#51e7ff}
-*{box-sizing:border-box}svg{width:100%;height:100%;display:block;overflow:hidden}svg text{fill:currentColor;font-weight:400;letter-spacing:.13px;pointer-events:none}.big{font-weight:700;filter:drop-shadow(0 0 4px #0ff6)}.label{fill:#9bdfff}.muted{fill:#6794a6}.gold{color:#ffb738}.green{color:#8fff73}.good{fill:#7ceefe}.spaced{letter-spacing:3px;fill:#02d1ff}.clock{letter-spacing:1px}
+*{box-sizing:border-box}svg{width:100%;height:100%;display:block;overflow:hidden}.house-bg{pointer-events:none}svg text{fill:currentColor;font-weight:400;letter-spacing:.13px;pointer-events:none}.big{font-weight:700;filter:drop-shadow(0 0 4px #0ff6)}.label{fill:#9bdfff}.muted{fill:#6794a6}.gold{color:#ffb738}.green{color:#8fff73}.good{fill:#7ceefe}.spaced{letter-spacing:3px;fill:#02d1ff}.clock{letter-spacing:1px}
 .panel{fill:url(#glass);stroke:#08d6fc;stroke-width:1.2;filter:drop-shadow(0 0 5px #00bfff55)}.rule{stroke:#077b9d;stroke-width:.8;fill:none}.icon{fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 6px currentColor)}.cash-bg{fill:#063025ee;stroke:#69ef87}.cash-border{fill:none;stroke:#69ef87;stroke-width:1.3;filter:drop-shadow(0 0 7px #63fa83)}
 /* V6.3: Originale JARVIS-Linienformen und Bewegung, mit statischem weichem Halo ohne SVG-Blur. */
 .energy-flow{--duration:2.2s;--reverse:normal;color:#10ddff;pointer-events:none;transition:opacity .4s ease}
@@ -326,6 +329,16 @@ class JarvisSteveEnergyCard extends HTMLElement {
 @keyframes energy-halo{0%,100%{opacity:.22}50%{opacity:.36}}
 :host([paused]) .dash,:host([paused]) .pulse,:host([paused]) .halo{animation-play-state:paused}
 @media (prefers-reduced-motion:reduce){.energy-flow .dash,.energy-flow .pulse,.energy-flow .halo{animation:none}}.dialog{position:absolute;inset:8% 17%;padding:2.5%;z-index:5;background:#001522f6;border:1px solid #2bdfff;border-radius:12px;box-shadow:0 0 30px #0097d965;color:#b8efff;overflow:auto;font-size:clamp(12px,1.3vw,20px)}.dialog[hidden]{display:none}.dialog h2{font-size:1.2em;letter-spacing:1px;color:#7eeeff;margin:0 3em .6em 0}.dialog button{font:inherit;background:#002733;color:#b8efff;border:1px solid #168aaa;border-radius:5px;cursor:pointer}.dialog .close{position:absolute;right:3%;top:4%;padding:.2em .6em}.details{display:grid;grid-template-columns:1fr auto;gap:0 .8em}.details .label-cell,.details .value-cell{border-bottom:1px solid #16434f;padding:.28em 0}.details .label-cell{background:transparent;border-top:0;border-left:0;border-right:0;text-align:left}.details .value-cell{text-align:right}.footnote{font-size:.75em;color:#84b5c5;line-height:1.45}.tariff-panel{border:1px solid #18546c;border-radius:8px;padding:12px;margin-bottom:15px;background:#002b3b80}.tariff-panel b{font-size:.95em;color:#7ceefe}.tariff-fields{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:10px 0}.tariff-fields label{display:flex;flex-direction:column;gap:5px;flex:1 1 135px}.tariff-fields input{width:100%;background:#001725;color:#fff;border:1px solid #298ab1;border-radius:4px;padding:7px;font:inherit}.tariff-fields button{padding:8px!important}.tariff-panel small{display:block;color:#a4c7d4}
+/* Kleine Bildschirme: Ansicht bleibt proportional, Dialoge werden eigenständig bedienbar. */
+@media (max-width:900px), (orientation:portrait){
+  .dialog{inset:8px;padding:14px;font-size:16px;max-height:calc(100% - 16px)}
+  .dialog h2{margin:0 48px 14px 0;line-height:1.35}
+  .dialog .close{top:8px;right:8px;min-width:42px;min-height:42px;font-size:24px}
+  .details{grid-template-columns:minmax(0,1fr) auto;gap:0 10px}
+  .details .label-cell{min-height:38px;text-align:left}
+  .tariff-fields input{font-size:16px;min-height:42px}
+  .tariff-fields button{min-height:42px}
+}
 </style>${svg}<section class="dialog" role="dialog" aria-modal="true" aria-label="JARVIS Energiedetails" hidden><button class="close" aria-label="Schließen">×</button><h2 id="detail-heading">ENERGIE · MONATSDETAILS</h2><div class="tariff-panel"><b>ENERGIE-TARIFE · ct/kWh</b><div class="tariff-fields"><label>Strombezug <input id="tariff-import" type="number" min="0" max="200" step="0.01" inputmode="decimal" placeholder="ct/kWh"></label><label>PV-Einspeisung <input id="tariff-export" type="number" min="0" max="200" step="0.01" inputmode="decimal" placeholder="ct/kWh"></label><button id="tariff-save" type="button">Tarife speichern</button></div><small id="tariff-state"></small></div><div class="details"></div><p class="footnote">„—“ bedeutet: Sensor fehlt, ist nicht verfügbar oder noch nicht verifiziert. Energiezähler (kWh) sind keine momentanen Leistungswerte (W). Ohne bestätigte Monatszyklen und Tarife werden keine Geld- oder Prozentwerte erfunden.</p></section>`;
     this._bindClicks();this._buildDetails();this._pause();this._clock();
   }
