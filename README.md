@@ -24,6 +24,12 @@ Ohne Helfer werden die Eingaben nur im jeweiligen Browser gespeichert.
 
 **Monatlicher Cashflow:** Einspeisung (kWh) × Einspeisetarif / 100 − Netzbezug (kWh) × Bezugstarif / 100. Fixe Gebühren, Steuern und Abgaben sind nicht automatisch enthalten. Die Monatszähler und Vorzeichen des Netzsensors müssen vor produktiver Kostennutzung überprüft werden.
 
+## Energielinien ohne Netzleistungs-Sensor
+
+Die Linien können auch **ohne aktuellen Netzleistungs-Sensor** erscheinen: Wenn Home Assistant einen eingeschalteten Verbraucher in einem zugeordneten Raum erkennt, wird bei verfügbarer PV-Leistung oberhalb der Schaltschwelle die blaue Linie angezeigt; ansonsten die rote Linie als **angenommene Netzversorgung**. Die angenommene rote Linie bedeutet **keine gemessene Netzleistung** und verändert weder Energiezähler noch Cashflow. Sobald ein bestätigter OBI-Live-Watt-Sensor vorliegt, wird dieser separat in der Karten-YAML für die echte Netzflussrichtung hinterlegt.
+
+Die Karte berücksichtigt sowohl Watt-Sensoren als auch den Ein/Aus-Zustand zugeordneter `light.`- und `switch.`-Entitäten. Voraussetzung ist die passende Raumzuordnung im Home Assistant.
+
 ## Automatische Raumzuordnung
 
 Verbraucher in Home Assistant einem Bereich zuordnen. Passende Leistungssensoren in W/kW werden von der Karte nach Bereich erkannt. Ohne Leistungssensor kann bei Licht/Schalter nur der Aktivzustand berücksichtigt werden, kein erfundener Wattwert. `area_map`, `exclude_entities` und manuelle `rooms`-Einträge erlauben Korrekturen.
