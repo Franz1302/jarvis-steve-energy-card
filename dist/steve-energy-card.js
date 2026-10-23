@@ -116,7 +116,7 @@ class JarvisSteveEnergyCard extends HTMLElement {
   setConfig(config){
     if(!config || typeof config!=='object')throw new Error('steve-energy-card: YAML-Konfiguration fehlt');
     const e=config.entities||{};
-    this._config={...config,entities:Object.fromEntries(JARVIS_STEVE_FIELDS.map(k=>[k,typeof e[k]==='string'&&e[k]?e[k]:null])),rooms:config.rooms||{},flow_threshold_w:Number(config.flow_threshold_w ?? 10),animations:config.animations!==false,grid_sign_verified:config.grid_sign_verified===true,auto_discover_rooms:config.auto_discover_rooms!==false,auto_switch_activity:config.auto_switch_activity!==false,area_map:config.area_map||{},exclude_entities:config.exclude_entities||[],tariff_helpers:{import:config.tariff_helpers?.import||'input_number.steve_bezugstarif_ct',export:config.tariff_helpers?.export||'input_number.steve_einspeisetarif_ct'}};
+    this._config={...config,entities:Object.fromEntries(JARVIS_STEVE_FIELDS.map(k=>[k,typeof e[k]==='string'&&e[k]?e[k]:null])),rooms:config.rooms||{},flow_threshold_w:Number(config.flow_threshold_w ?? 10),animations:config.animations!==false,grid_sign_verified:config.grid_sign_verified===true,grid_import_positive_verified:config.grid_import_positive_verified===true,auto_discover_rooms:config.auto_discover_rooms!==false,auto_switch_activity:config.auto_switch_activity!==false,area_map:config.area_map||{},exclude_entities:config.exclude_entities||[],tariff_helpers:{import:config.tariff_helpers?.import||'input_number.steve_bezugstarif_ct',export:config.tariff_helpers?.export||'input_number.steve_einspeisetarif_ct'}};
     if(!Number.isFinite(this._config.flow_threshold_w)||this._config.flow_threshold_w<0)throw new Error('flow_threshold_w muss >= 0 sein');
     // The image is rendered in the SVG coordinate system, not stretched independently on the host.
     this.style.backgroundImage='none';this._render();this._registryIdentity=null;this._syncDiscovery();if(this._hass)this._update();
@@ -352,7 +352,9 @@ class JarvisSteveEnergyCard extends HTMLElement {
   _moreInfo(key){const entity=this._config?.entities?.[key];if(entity){this.dispatchEvent(new CustomEvent('hass-more-info',{bubbles:true,composed:true,detail:{entityId:entity}}));}else{this._openDetails('DATENQUELLE NOCH NICHT VORHANDEN');}}
   _openRoom(key){this._openDetails('RAUMENERGIE · '+(JARVIS_STEVE_ROOMS.find(r=>r[0]===key)?.[1]||key));}
   _update(){if(!this._config||!this.shadowRoot.querySelector('svg'))return;
-    const pv=this._quantity('pv','power'),house=this._quantity('house','power');let imp=this._quantity('imp','power'),exp=this._quantity('exp','power');const meter=this._config.grid_sign_verified?this._quantity('meter','power'):null;
+    const pv=this._quantity('pv','power'),house=this._quantity('house','power');let imp=this._quantity('imp','power'),exp=this._quantity('exp','power');const meterRaw=this._quantity('meter','power');
+    // A confirmed positive grid reading may show import while export direction remains unverified.
+    const meter=(this._config.grid_sign_verified||(this._config.grid_import_positive_verified&&meterRaw!==null&&meterRaw>=0))?meterRaw:null;
     if(meter!==null){if(imp===null)imp=Math.max(0,meter);if(exp===null)exp=Math.max(0,-meter);}
     const net=meter!==null?meter:(imp!==null&&exp!==null?imp-exp:null),th=this._config.flow_threshold_w;
     for(const [id,v] of [['pv',pv],['house',house],['imp',imp],['exp',exp]])this._txt(id,this._power(v));
@@ -368,7 +370,7 @@ class JarvisSteveEnergyCard extends HTMLElement {
     // PV > threshold takes priority, and no unmeasured watt value is invented.
     const infos={};for(const [key] of JARVIS_STEVE_ROOMS)infos[key]=this._roomInfo(key);
     const anyActive=Object.values(infos).some(info=>info.active);
-    const assumedGrid=net===null&&!pvAvailable&&anyActive;
+    const assumedGrid=net===null&&meterRaw===null&&!pvAvailable&&anyActive;
     this._flow('pv-flow',activePreview||pvAvailable,'#10ddff',false);
     this._flow('grid-flow',activePreview||gridAvailable||assumedGrid,'#ff4055',net!==null&&net < -th);
     const gridSource=this.shadowRoot.getElementById('grid-flow');
