@@ -135,32 +135,66 @@ class JarvisSteveEnergyCard extends HTMLElement {
   }
   // Home Assistants eigene Area/Device/Entity-Registries sind die einzige Quelle
   // für automatische Raumzuordnung. Neue Geräte kommen beim nächsten HA-Update dazu.
+  // Some dashboard contexts don't expose the three frontend registries.
+  // Fetch them read-only via the official Home Assistant WebSocket API instead.
+  async _loadRegistries(){
+    const h=this._hass;
+    if(this._registryLoading||typeof h?.callWS!=='function'||Date.now()<(this._registryRetryAt||0))return;
+    this._registryLoading=true;
+    try{
+      const [areaList,deviceList,entityList]=await Promise.all([
+        h.callWS({type:'config/area_registry/list'}),
+        h.callWS({type:'config/device_registry/list'}),
+        h.callWS({type:'config/entity_registry/list'})
+      ]);
+      if(![areaList,deviceList,entityList].every(Array.isArray))throw new Error('Unerwartetes Registerformat');
+      this._registryFallback={
+        areas:Object.fromEntries(areaList.map(a=>[a.area_id,a]).filter(([id])=>id)),
+        devices:Object.fromEntries(deviceList.map(d=>[d.id,d]).filter(([id])=>id)),
+        entities:Object.fromEntries(entityList.map(e=>[e.entity_id,e]).filter(([id])=>id))
+      };
+      this._registryRefreshAfter=Date.now()+300000;
+      this._registryRetryAt=0;
+      this._registryIdentity=null;
+      this._syncDiscovery();
+      if(this._config)this._update();
+    }catch(error){
+      this._registryRetryAt=Date.now()+60000;
+      console.warn('[JARVIS Steve Energy] Raumregister konnten nicht gelesen werden:',error);
+    }finally{this._registryLoading=false;}
+  }
   _syncDiscovery(){
     const h=this._hass,c=this._config;
-    if(!c?.auto_discover_rooms||!h?.areas||!h?.entities||!h?.devices){this._autoRoomCache={};return;}
-    if(this._registryIdentity?.areas===h.areas&&this._registryIdentity?.entities===h.entities&&this._registryIdentity?.devices===h.devices)return;
-    this._registryIdentity={areas:h.areas,entities:h.entities,devices:h.devices};
+    if(!c?.auto_discover_rooms){this._autoRoomCache={};return;}
+    let areas=h?.areas,entities=h?.entities,devices=h?.devices;
+    if(!areas||!entities||!devices){
+      if(!this._registryFallback){this._autoRoomCache={};this._loadRegistries();return;}
+      ({areas,entities,devices}=this._registryFallback);
+      if(Date.now()>(this._registryRefreshAfter||0))this._loadRegistries();
+    }
+    if(this._registryIdentity?.areas===areas&&this._registryIdentity?.entities===entities&&this._registryIdentity?.devices===devices)return;
+    this._registryIdentity={areas,entities,devices};
     const normalized=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'');
     const aliases={kueche:['küche','kueche','kitchen'],flur:['flur','gang','hallway'],garten:['garten','outdoor'],treppenhaus:['treppenhaus','stiegenhaus'],esszimmer:['esszimmer','essecke'],schlafzimmer:['schlafzimmer']};
     const roomAreas={};
     for(const [key,label] of JARVIS_STEVE_ROOMS){
       const override=c.area_map?.[key];
-      let matched=Object.values(h.areas).find(a=>override&&(a.area_id===override||normalized(a.name)===normalized(override)));
-      if(!matched)matched=Object.values(h.areas).find(a=>[key,label,...(aliases[key]||[])].some(t=>normalized(t)===normalized(a.name)||a.aliases?.some(x=>normalized(x)===normalized(t))));
+      let matched=Object.values(areas).find(a=>override&&(a.area_id===override||normalized(a.name)===normalized(override)));
+      if(!matched)matched=Object.values(areas).find(a=>[key,label,...(aliases[key]||[])].some(t=>normalized(t)===normalized(a.name)||a.aliases?.some(x=>normalized(x)===normalized(t))));
       if(matched)roomAreas[key]=matched.area_id;
     }
     const areaFor=entry=>{
       if(entry.area_id)return entry.area_id;
-      let d=h.devices[entry.device_id],depth=0;
-      while(d&&depth++<4){if(d.area_id)return d.area_id;d=d.parent_device_id?h.devices[d.parent_device_id]:null;}
+      let d=devices[entry.device_id],depth=0;
+      while(d&&depth++<4){if(d.area_id)return d.area_id;d=d.parent_device_id?devices[d.parent_device_id]:null;}
       return null;
     };
     const skip=new Set(c.exclude_entities||[]),auto={};
     for(const [key,area] of Object.entries(roomAreas)){
       // Ein Messwert je HA-Gerät verhindert doppelte Zählung von 'power' und 'total_power'.
       const byDevice=new Map(),activity=[],explicit=new Set(c.rooms?.[key]?.power||[]);
-      const explicitDevices=new Set([...explicit].map(id=>h.entities[id]?.device_id).filter(Boolean));
-      for(const [id,e] of Object.entries(h.entities)){
+      const explicitDevices=new Set([...explicit].map(id=>entities[id]?.device_id).filter(Boolean));
+      for(const [id,e] of Object.entries(entities)){
         if(skip.has(id)||e.disabled_by||e.hidden_by||e.entity_category||areaFor(e)!==area)continue;
         const st=h.states?.[id];if(!st)continue;
         const d=e.device_id||id;
@@ -177,7 +211,7 @@ class JarvisSteveEnergyCard extends HTMLElement {
         }
       }
       if(c.auto_switch_activity){
-        for(const [id,e] of Object.entries(h.entities)){
+        for(const [id,e] of Object.entries(entities)){
           // Power is counted once per device; its on/off status is separate and
           // may activate the visual route even when wattage is below threshold.
           if(skip.has(id)||e.disabled_by||e.hidden_by||areaFor(e)!==area)continue;
