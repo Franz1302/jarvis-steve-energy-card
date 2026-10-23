@@ -330,8 +330,8 @@ class JarvisSteveEnergyCard extends HTMLElement {
       <circle id="autarky-ring" cx="263" cy="77" r="10" fill="none" stroke="#7dff82" stroke-width="2.5" transform="rotate(-90 263 77)" stroke-dasharray="0 62.83"/>
       ${this._txtSvg('autarky-day',280,82,18,'—','big')}
     </g>
-    <!-- Originale Monats-/Wirtschafts-HUDs: aktiver, klickbarer Vektor-Steg am unteren Bildrand. -->
-    <g id="bottom-dock" transform="translate(-6 150) scale(.992 .87)">
+    <!-- Monatliche HUD-Leiste: gleichmaessig skalierte Schrift fuer schmale LCARS-Ansichten. -->
+    <g id="bottom-dock" transform="translate(-6 46) scale(.992)">
     ${this._rect(22,794,1628,107)}<path class="rule" d="M271 812V884M520 812V884M765 812V884M1384 812V884"/><path d="M1026 812V885" stroke="#71ff4b" stroke-width="1.4"/>
     <g class="hit" data-key="monthImport" tabindex="0" role="button">${this._icon('cal',71,845,.82)}${this._txtSvg('',120,820,12,'MONAT')}${this._txtSvg('',120,837,16,'Netzbezug')}${this._txtSvg('monthImport',120,865,27,'—','big')}${this._txtSvg('evn',120,887,18,'—','good')}</g>
     <g class="hit" data-key="monthExport" tabindex="0" role="button">${this._icon('grid',313,845,.82,'gold')}${this._txtSvg('',368,820,12,'MONAT')}${this._txtSvg('',368,837,16,'Einspeisung')}${this._txtSvg('monthExport',368,865,27,'—','big')}${this._txtSvg('export-revenue',368,887,18,'—','good')}</g>
@@ -344,7 +344,7 @@ class JarvisSteveEnergyCard extends HTMLElement {
     </svg>`;
     this.shadowRoot.innerHTML=`<style>
 :host{display:block;position:relative;width:100%;height:100%;aspect-ratio:1672/941;background-repeat:no-repeat;color:#63e4ff;font-family:'Arial Narrow','Roboto Condensed',Arial,sans-serif;--cyan:#51e7ff}
-*{box-sizing:border-box}svg{width:100%;height:100%;display:block;overflow:hidden}.house-bg{pointer-events:none}svg text{fill:currentColor;font-weight:400;letter-spacing:.13px;pointer-events:none}.big{font-weight:700;filter:drop-shadow(0 0 4px #0ff6)}.label{fill:#9bdfff}.muted{fill:#6794a6}.gold{color:#ffb738}.green{color:#8fff73}.good{fill:#7ceefe}.spaced{letter-spacing:3px;fill:#02d1ff}.clock{letter-spacing:1px}
+*{box-sizing:border-box}svg{width:100%;height:100%;display:block;overflow:hidden}.house-bg{pointer-events:none}svg text{fill:currentColor;font-weight:400;letter-spacing:.13px;pointer-events:none}.big{font-weight:700;filter:drop-shadow(0 0 4px #0ff6)}/* Im verkleinerten LCARS-Layout verursachen SVG-Textfilter beim Resize Ghosting. */#bottom-dock text.big,#bottom-dock .icon{filter:none}.label{fill:#9bdfff}.muted{fill:#6794a6}.gold{color:#ffb738}.green{color:#8fff73}.good{fill:#7ceefe}.spaced{letter-spacing:3px;fill:#02d1ff}.clock{letter-spacing:1px}
 .panel{fill:url(#glass);stroke:#08d6fc;stroke-width:1.2;filter:drop-shadow(0 0 5px #00bfff55)}.rule{stroke:#077b9d;stroke-width:.8;fill:none}.icon{fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 6px currentColor)}.cash-bg{fill:#063025ee;stroke:#69ef87}.cash-border{fill:none;stroke:#69ef87;stroke-width:1.3;filter:drop-shadow(0 0 7px #63fa83)}
 /* V6.3: Originale JARVIS-Linienformen und Bewegung, mit statischem weichem Halo ohne SVG-Blur. */
 .energy-flow{--duration:2.2s;--reverse:normal;color:#10ddff;pointer-events:none;transition:opacity .4s ease}
