@@ -10,18 +10,19 @@ tariff_helpers:
   import: input_number.steve_bezugstarif_ct
   export: input_number.steve_einspeisetarif_ct
 grid_sign_verified: false
+grid_import_positive_verified: true  # Positiver OBI-Netzbezug durch Schaltversuch bestaetigt
 entities:
   pv: sensor.solis_inverter_ac_power
-  house: sensor.solis_home_load_power
+  house: sensor.steve_hausverbrauch_berechnet
   imp:
   exp:
-  meter:
+  meter: sensor.obi_energy_bridge_aktuelle_leistung
   pvDay: sensor.solis_inverter_generation_today
   gridImportDay: sensor.solis_grid_import_today
   exportDay: sensor.solis_grid_export_today
   houseDay: sensor.solis_home_load_today
-  monthImport: sensor.solis_grid_import_this_month
-  monthExport: sensor.solis_grid_export_this_month
+  monthImport: sensor.obi_energy_bridge_steve_netzbezug_monat
+  monthExport: sensor.obi_energy_bridge_steve_einspeisung_monat
   pvMonth: sensor.solis_inverter_generation_this_month
   cost:
   cash:
